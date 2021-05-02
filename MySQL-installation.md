@@ -19,7 +19,7 @@ docker exec -it [container_name] mysql -u root -p
 ## Create docker-compose configuration
 
 - Create `~/mysql` directory to persist all the data, configuration and passwords etc
-- Create an empty directory to store `docker-compose.yml`
+- Create `~/int221-database` directory to store `docker-compose.yml`
 - `docker-compose.yml` configuration:
 
 ```
@@ -41,5 +41,5 @@ services:
 ## Run MySQL Container
 
 ```
-docker-compose up
+docker-compose up -d
 ```
