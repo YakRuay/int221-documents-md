@@ -6,21 +6,11 @@
 docker pull mysql/mysql-server
 ```
 
-## Connect to MySQL Docker Container
-
-```
-# Install mysql-client
-apt-get install mysql-client
-# Start mysql-client inside container
-docker exec -it [container_name] mysql -u root -p
-```
-
-
 ## Create docker-compose configuration
 
 - Create `~/mysql` directory to persist all the data, configuration and passwords etc
 - Create `~/int221-database` directory to store this `docker-compose.yml`
-- Store `data.sql` in `~/int221-database` directory
+- Store `initdb.sql` in `~/int221-database` directory
 - `docker-compose.yml` configuration:
 
 ```
@@ -28,16 +18,16 @@ services:
     mysqldb:
         image: mysql/mysql-server
         restart: always
+        ports:
+            - 3306:3306
         environment:
-            MYSQL_DATABASE: db
-            MYSQL_USER: rew
+            MYSQL_DATABASE: sandalsshop
+            MYSQL_USER: backend
             MYSQL_PASSWORD: YakRuay@2X64
             MYSQL_ROOT_PASSWORD: YakRuay@2X64
-        ports:
-            - "3306:3306"
         volumes:
             - ~/mysql:/var/lib/mysql
-            - ./data.sql:/data.sql
+            - ./initdb.sql:/initdb.sql
 networks:
     default:
         external:
@@ -50,9 +40,18 @@ networks:
 docker-compose up -d
 ```
 
-## Create database from mounted data.sql
+## Create database from mounted initdb.sql
 
 ```
 docker exec -it [container_name] bash
-mysql -u root -p < data.sql
+mysql -u root -p < initdb.sql
+```
+
+## Grant permission on database to backend user
+
+```
+GRANT SELECT, INSERT, UPDATE, DELETE ON sandalsshop.Products TO backend@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON sandalsshop.ProductColors TO backend@'%';
+GRANT SELECT ON sandalsshop.Colors TO backend@'%';
+GRANT SELECT ON sandalsshop.Brands TO backend@'%';
 ```
