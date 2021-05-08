@@ -18,8 +18,6 @@ services:
     mysqldb:
         image: mysql/mysql-server
         restart: always
-        ports:
-            - 3306:3306
         environment:
             MYSQL_DATABASE: sandalsshop
             MYSQL_USER: backend
