@@ -2,13 +2,11 @@
 
 ## Infrastructure Architecture Diagram
 
-```
+![image](https://cdn.discordapp.com/attachments/695225022226104391/841232350897635338/Screen_Shot_2564-05-10_at_15.36.46.png)
 
-```
+## Prerequisites
 
-## Prerequisite
-
-- Create docker-network named `int221-network` for this project
+- Before running these project's container, you need to create docker-network named `int221-network` for this project
 
 ```
 docker network create -d bridge int221-network
@@ -18,7 +16,7 @@ docker network create -d bridge int221-network
 
 - For this frotnend container configuration, we used both `Dockerfile` and `docker-compose.yml` to configure the container
 - We used `Dockerfile` to configure how to build the image for this container
-- We used 
+- We used `docker-compose.yml` to configure the container's properties such as container's network, image's name etc.
 
 ### Dockerfile
 
@@ -54,6 +52,8 @@ server{
 }
 ```
 
+- Configure an nginx to root of `index.html`
+
 ### docker-compose.yml
 
 ```
@@ -69,8 +69,8 @@ networks:
             name: int221-network
 ```
 
-- In `docker-compose.yml`, we used it to define the container's properties such as container's network, container's image, build file location (Dockerfile) etc.
-- For docker network, we need to create it in an instance before we deploy by using this command
+- Define an image's name as `ghcr.io/yakruay/int221-frontend:dev`
+- Define docker network as `int221-network`
 
 ## Backend Configuration
 
@@ -88,6 +88,8 @@ ARG JAR_FILE=/backend/target/int221-backend-0.0.1-SNAPSHOT.jar
 COPY --from=build ${JAR_FILE} int221-backend-0.0.1-SNAPSHOT.jar
 ENTRYPOINT ["java","-jar","int221-backend-0.0.1-SNAPSHOT.jar"]
 ```
+- First, we build the project with `maven:3.6.0-jdk-11-slim`
+- After finished building the project, we deploy it by copying `.jar file` to docker container
 
 ### docker-compose.yml
 
@@ -105,6 +107,10 @@ networks:
         external:
             name: int221-network
 ```
+
+- Define an image's name as `ghcr.io/yakruay/int221-backend:dev`
+- Define docker network as `int221-network`
+- Define volume for storing image from backend as `~/backendImages:/src/images`
 
 ## Database Configuration
 
@@ -129,6 +135,28 @@ networks:
             name: int221-network
 ```
 
+- These environments that we defined in `docker-compose.yml` is being used to create database, user, password and root password
+- Define volume to persist all the data and configuration from docker container to `~/mysql`
+- Define volume to store `initdb.sql` script to docker container
+- Create database and insert data with `initdb.sql` 
+
+```
+# Connect to database docker container
+docker exec -it [container_name] bash
+
+# Connect to mysql server with initdb.sql to create table and insert data
+mysql -u root -p < initdb.sql
+```
+
+- Grant permission to `backend` user on `sandalsshop` database
+
+```
+GRANT SELECT, INSERT, UPDATE, DELETE ON sandalsshop.Products TO backend@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON sandalsshop.ProductColors TO backend@'%';
+GRANT SELECT ON sandalsshop.Colors TO backend@'%';
+GRANT SELECT ON sandalsshop.Brands TO backend@'%';
+```
+
 ## Reverse proxy Configuration
 
 ### docker-compose.yml
@@ -142,12 +170,14 @@ services:
             - ./nginx.conf:/etc/nginx/conf.d/default.conf
         ports:
             - 80:80
-            - 443:443
 networks:
     default:
         external:
             name: int221-network
 ```
+
+- For reverse proxy container, we set it to expose on `port 80`
+- Replace nginx `default.conf` with `nginx.conf` that we prepared
 
 ### nginx.conf
 
@@ -166,3 +196,132 @@ server {
 	}
 }
 ```
+
+- For `nginx.conf`, we set it to listen on `port 80`
+- For location `/`, we set it proxy_pass to `frontend container` on `port 80` which has an internal hostname as `http://frontend`
+- For location `/backend`, we set it proxy_pass to `backend container` on `port 5000` which has an internal hostname as `http://backend`
+- These hostname comes from `service_name` that we defined under `services` in `docker-compose.yml` for each service
+
+## GitHub Action CI/CD
+
+### Prerequisites
+
+- All the docker image must have nameing pattern like this
+
+```
+ghcr.io/$GITHUB_USER/[repository_name]:[tag]
+```
+- Enable container support in GitHub account
+- Generate Person Access Token (PAT) for GitHub account
+- Generate `ssh-key` for GitHub
+- Register `ssh-key` to repository's secrets as `PRIVATE_KEY`
+- `mkdir -p .github/workflows` in git repositories
+- Store `workflow` file in `.github/workflows`
+
+### int221-frontend-dev.yml workflow
+
+```
+name: int221-frontend-dev
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Login to Github Docker Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: ghcr.io/yakruay/int221-frontend:dev
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Execute deploy SSH commmands on remote server
+      uses: JimCronqvist/action-ssh@master
+      with:
+        hosts: 'rew@52.187.108.86'
+        privateKey: ${{ secrets.PRIVATE_KEY }}
+        command: |
+          cd int221-frontend
+          git checkout dev
+          git pull
+          docker pull ghcr.io/yakruay/int221-frontend:dev
+          docker-compose down
+          docker-compose up -d
+```
+
+### int221-backend-dev.yml workflow
+
+```
+name: int221-backend-dev
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Login to Github Docker Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: ghcr.io/yakruay/int221-backend:dev
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Execute deploy SSH commmands on remote server
+      uses: JimCronqvist/action-ssh@master
+      with:
+        hosts: 'rew@52.187.108.86'
+        privateKey: ${{ secrets.PRIVATE_KEY }}
+        command: |
+          cd int221-backend
+          git checkout dev
+          git pull
+          docker pull ghcr.io/yakruay/int221-backend:dev
+          docker-compose down
+          docker-compose up -d
+```
+
+### Workflow process
+
+- These workflow will work everytime we push the commit to GitHub repository on `dev` branch
+- In the build stage, we build docker-image on GitHub Action machine and push it to GitHub Container Reistry (GHCR)
+- In the deploy stage, we ssh to remote server and execute listed command in that step
