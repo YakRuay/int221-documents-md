@@ -58,3 +58,22 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON sandalsshop.ProductColors TO backend@'%'
 GRANT SELECT ON sandalsshop.Colors TO backend@'%';
 GRANT SELECT ON sandalsshop.Brands TO backend@'%';
 ```
+
+## Screenshots
+
+### Show container status and log
+
+![image](https://cdn.discordapp.com/attachments/695225022226104391/841226604210552882/Screen_Shot_2564-05-10_at_15.08.08.png)
+
+### Show databases
+
+![image](https://cdn.discordapp.com/attachments/695225022226104391/841226605199622204/Screen_Shot_2564-05-10_at_15.09.42.png)
+
+### Show tables
+
+![image](https://cdn.discordapp.com/attachments/695225022226104391/841226608191078410/Screen_Shot_2564-05-10_at_15.13.27.png)
+
+
+### Show grants for backend user
+
+![image](https://cdn.discordapp.com/attachments/695225022226104391/841226600024113152/Screen_Shot_2564-05-05_at_22.39.46.png)
