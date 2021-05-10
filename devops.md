@@ -14,7 +14,7 @@ docker network create -d bridge int221-network
 
 ## Frontend Configuration
 
-- For this frotnend container configuration, we used both `Dockerfile` and `docker-compose.yml` to configure the container
+- For this Frontend container configuration, we used both `Dockerfile` and `docker-compose.yml` to configure the container
 - We used `Dockerfile` to configure how to build the image for this container
 - We used `docker-compose.yml` to configure the container's properties such as container's network, image's name etc.
 
@@ -74,6 +74,10 @@ networks:
 
 ## Backend Configuration
 
+- For this Backend container configuration, we used both `Dockerfile` and `docker-compose.yml` to configure the container
+- We used `Dockerfile` to configure how to build the image for this container
+- We used `docker-compose.yml` to configure the container's properties such as container's network, image's name etc.
+
 ### Dockerfile
 
 ```
@@ -113,6 +117,9 @@ networks:
 - Define volume for storing image from backend as `~/backendImages:/src/images`
 
 ## Database Configuration
+
+- For this Database container configuration, we used only `docker-compose.yml` to configure the container
+- We don't need `Dockerfile` because we don't have anything to build
 
 ### docker-compose.yml
 
@@ -159,6 +166,9 @@ GRANT SELECT ON sandalsshop.Brands TO backend@'%';
 
 ## Reverse proxy Configuration
 
+ - For this Reverse Proxy container configuration, we used only `docker-compose.yml` to configure the container
+- We don't need `Dockerfile` because we don't have anything to build
+
 ### docker-compose.yml
 
 ```
@@ -199,20 +209,20 @@ server {
 
 - For `nginx.conf`, we set it to listen on `port 80`
 - For location `/`, we set it proxy_pass to `frontend container` on `port 80` which has an internal hostname as `http://frontend`
-- For location `/backend`, we set it proxy_pass to `backend container` on `port 5000` which has an internal hostname as `http://backend`
-- These hostname comes from `service_name` that we defined under `services` in `docker-compose.yml` for each service
+- For location `/backend`, we set it proxy_pass to `backend container` on `port 5000` which has an internal hostname as `http://backend` (we set backend `server.port=5000`)
+- These hostname come from `service_name` that we defined under `services` in `docker-compose.yml` for each service
 
 ## GitHub Action CI/CD
 
 ### Prerequisites
 
-- All the docker image must have nameing pattern like this
+- All the docker image must have naming pattern like this
 
 ```
 ghcr.io/$GITHUB_USER/[repository_name]:[tag]
 ```
 - Enable container support in GitHub account
-- Generate Person Access Token (PAT) for GitHub account
+- Generate Personal Access Token (PAT) for GitHub account
 - Generate `ssh-key` for GitHub
 - Register `ssh-key` to repository's secrets as `PRIVATE_KEY`
 - `mkdir -p .github/workflows` in git repositories
